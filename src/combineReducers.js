@@ -3,6 +3,7 @@ import warning from './utils/warning'
 import isPlainObject from './utils/isPlainObject'
 import { kindOf } from './utils/kindOf'
 
+// state的类型检查和reducer的有效性检查
 function getUnexpectedStateShapeWarningMessage(
   inputState,
   reducers,
@@ -51,6 +52,7 @@ function getUnexpectedStateShapeWarningMessage(
   }
 }
 
+// 检查每个reducer执行初始化的action后得到的state是否为空
 function assertReducerShape(reducers) {
   Object.keys(reducers).forEach((key) => {
     const reducer = reducers[key]
@@ -99,9 +101,11 @@ function assertReducerShape(reducers) {
  * @returns {Function} A reducer function that invokes every reducer inside the
  * passed object, and builds a state object with the same shape.
  */
+// 记住reducer是一个函数，即无论怎么玩，return一定是一个函数
 export default function combineReducers(reducers) {
   const reducerKeys = Object.keys(reducers)
   const finalReducers = {}
+  // 过滤一下不支持的reducer
   for (let i = 0; i < reducerKeys.length; i++) {
     const key = reducerKeys[i]
 
@@ -115,6 +119,7 @@ export default function combineReducers(reducers) {
       finalReducers[key] = reducers[key]
     }
   }
+  // 得到最终的reducer分层
   const finalReducerKeys = Object.keys(finalReducers)
 
   // This is used to make sure we don't warn about the same
@@ -126,6 +131,7 @@ export default function combineReducers(reducers) {
 
   let shapeAssertionError
   try {
+    // 检查reducer的初始化action的state返回
     assertReducerShape(finalReducers)
   } catch (e) {
     shapeAssertionError = e
@@ -137,6 +143,7 @@ export default function combineReducers(reducers) {
     }
 
     if (process.env.NODE_ENV !== 'production') {
+      // 检查state和reducer
       const warningMessage = getUnexpectedStateShapeWarningMessage(
         state,
         finalReducers,
@@ -151,6 +158,7 @@ export default function combineReducers(reducers) {
     let hasChanged = false
     const nextState = {}
     for (let i = 0; i < finalReducerKeys.length; i++) {
+      // 更新每一小部分的state
       const key = finalReducerKeys[i]
       const reducer = finalReducers[key]
       const previousStateForKey = state[key]
@@ -170,6 +178,7 @@ export default function combineReducers(reducers) {
     }
     hasChanged =
       hasChanged || finalReducerKeys.length !== Object.keys(state).length
+      // 基于是否改变返回旧的state或新的state
     return hasChanged ? nextState : state
   }
 }

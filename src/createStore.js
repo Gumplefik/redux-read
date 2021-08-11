@@ -30,6 +30,7 @@ import { kindOf } from './utils/kindOf'
  * and subscribe to changes.
  */
 export default function createStore(reducer, preloadedState, enhancer) {
+  // 入参检查
   if (
     (typeof preloadedState === 'function' && typeof enhancer === 'function') ||
     (typeof enhancer === 'function' && typeof arguments[3] === 'function')
@@ -41,11 +42,13 @@ export default function createStore(reducer, preloadedState, enhancer) {
     )
   }
 
+  // 参数的顺序转换
   if (typeof preloadedState === 'function' && typeof enhancer === 'undefined') {
     enhancer = preloadedState
     preloadedState = undefined
   }
 
+  // 增强器的类型检查
   if (typeof enhancer !== 'undefined') {
     if (typeof enhancer !== 'function') {
       throw new Error(
@@ -58,6 +61,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
     return enhancer(createStore)(reducer, preloadedState)
   }
 
+  // reducer的类型检查
   if (typeof reducer !== 'function') {
     throw new Error(
       `Expected the root reducer to be a function. Instead, received: '${kindOf(
@@ -79,6 +83,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
    * This prevents any bugs around consumers calling
    * subscribe/unsubscribe in the middle of a dispatch.
    */
+  // 浅拷贝的检查
   function ensureCanMutateNextListeners() {
     if (nextListeners === currentListeners) {
       nextListeners = currentListeners.slice()
@@ -90,6 +95,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
    *
    * @returns {any} The current state tree of your application.
    */
+  // 获取state，在dispatch期间不允许获取state
   function getState() {
     if (isDispatching) {
       throw new Error(
@@ -126,6 +132,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
    * @returns {Function} A function to remove this change listener.
    */
   function subscribe(listener) {
+    // 监听器的检查
     if (typeof listener !== 'function') {
       throw new Error(
         `Expected the listener to be a function. Instead, received: '${kindOf(
@@ -134,6 +141,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
       )
     }
 
+    // dispatch期间不允许添加监听器
     if (isDispatching) {
       throw new Error(
         'You may not call store.subscribe() while the reducer is executing. ' +
@@ -143,11 +151,14 @@ export default function createStore(reducer, preloadedState, enhancer) {
       )
     }
 
+    // 闭包变量方便在取消关注时做检查
     let isSubscribed = true
 
     ensureCanMutateNextListeners()
+    // 推入监听者集合
     nextListeners.push(listener)
 
+    // 返回取消关注的函数
     return function unsubscribe() {
       if (!isSubscribed) {
         return
@@ -163,6 +174,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
       isSubscribed = false
 
       ensureCanMutateNextListeners()
+      // 从监听者中移除
       const index = nextListeners.indexOf(listener)
       nextListeners.splice(index, 1)
       currentListeners = null
@@ -194,7 +206,9 @@ export default function createStore(reducer, preloadedState, enhancer) {
    * Note that, if you use a custom middleware, it may wrap `dispatch()` to
    * return something else (for example, a Promise you can await).
    */
+  // 关键的触发action，生成新的state
   function dispatch(action) {
+    // 简单对象形式的action检查
     if (!isPlainObject(action)) {
       throw new Error(
         `Actions must be plain objects. Instead, the actual type was: '${kindOf(
@@ -203,23 +217,27 @@ export default function createStore(reducer, preloadedState, enhancer) {
       )
     }
 
+    // action应该有type标识
     if (typeof action.type === 'undefined') {
       throw new Error(
         'Actions may not have an undefined "type" property. You may have misspelled an action type string constant.'
       )
     }
 
+    // dispatch期间不允许出发action
     if (isDispatching) {
       throw new Error('Reducers may not dispatch actions.')
     }
 
     try {
       isDispatching = true
+      // 获取新的state
       currentState = currentReducer(currentState, action)
     } finally {
       isDispatching = false
     }
 
+    // 监听者依次执行
     const listeners = (currentListeners = nextListeners)
     for (let i = 0; i < listeners.length; i++) {
       const listener = listeners[i]
@@ -240,6 +258,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
    * @returns {void}
    */
   function replaceReducer(nextReducer) {
+    // 类型检查
     if (typeof nextReducer !== 'function') {
       throw new Error(
         `Expected the nextReducer to be a function. Instead, received: '${kindOf(
@@ -248,12 +267,14 @@ export default function createStore(reducer, preloadedState, enhancer) {
       )
     }
 
+    // 更新变量
     currentReducer = nextReducer
 
     // This action has a similiar effect to ActionTypes.INIT.
     // Any reducers that existed in both the new and old rootReducer
     // will receive the previous state. This effectively populates
     // the new state tree with any relevant data from the old one.
+    // 触发内置的action
     dispatch({ type: ActionTypes.REPLACE })
   }
 
@@ -284,6 +305,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
         }
 
         function observeState() {
+          // 只要observer有next，每次dispatch的时候都会执行next
           if (observer.next) {
             observer.next(getState())
           }
@@ -291,9 +313,11 @@ export default function createStore(reducer, preloadedState, enhancer) {
 
         observeState()
         const unsubscribe = outerSubscribe(observeState)
+        // 返回取消监听函数
         return { unsubscribe }
       },
 
+      // 返回自己，特殊标识
       [$$observable]() {
         return this
       },
@@ -303,6 +327,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
   // When a store is created, an "INIT" action is dispatched so that every
   // reducer returns their initial state. This effectively populates
   // the initial state tree.
+  // 内置的初始化dispatch
   dispatch({ type: ActionTypes.INIT })
 
   return {

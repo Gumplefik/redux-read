@@ -1,5 +1,13 @@
+/*
+ * @Author: maqq
+ * @Date: 2021-08-11 10:01:43
+ * @LastEditors: maqq
+ * @LastEditTime: 2021-08-11 15:34:48
+ * @Description: file content
+ */
 import { kindOf } from './utils/kindOf'
 
+// 返回一个会绑定上下文的actionCreator
 function bindActionCreator(actionCreator, dispatch) {
   return function () {
     return dispatch(actionCreator.apply(this, arguments))
@@ -28,10 +36,12 @@ function bindActionCreator(actionCreator, dispatch) {
  * function.
  */
 export default function bindActionCreators(actionCreators, dispatch) {
+  // 函数说明是单个ActionCreator
   if (typeof actionCreators === 'function') {
     return bindActionCreator(actionCreators, dispatch)
   }
 
+  // 对象检查
   if (typeof actionCreators !== 'object' || actionCreators === null) {
     throw new Error(
       `bindActionCreators expected an object or a function, but instead received: '${kindOf(
@@ -45,8 +55,10 @@ export default function bindActionCreators(actionCreators, dispatch) {
   for (const key in actionCreators) {
     const actionCreator = actionCreators[key]
     if (typeof actionCreator === 'function') {
+      // 创建单个ActionCreator，保存下来
       boundActionCreators[key] = bindActionCreator(actionCreator, dispatch)
     }
   }
+  // 返回ActionCreator的集合
   return boundActionCreators
 }

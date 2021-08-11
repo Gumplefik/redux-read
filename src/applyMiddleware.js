@@ -1,3 +1,10 @@
+/*
+ * @Author: maqq
+ * @Date: 2021-08-11 10:01:43
+ * @LastEditors: maqq
+ * @LastEditTime: 2021-08-11 16:16:16
+ * @Description: file content
+ */
 import compose from './compose'
 
 /**
@@ -30,7 +37,9 @@ export default function applyMiddleware(...middlewares) {
       getState: store.getState,
       dispatch: (...args) => dispatch(...args),
     }
+    // 将中间件绑定入参
     const chain = middlewares.map((middleware) => middleware(middlewareAPI))
+    // 重写dispatch
     dispatch = compose(...chain)(store.dispatch)
 
     return {
